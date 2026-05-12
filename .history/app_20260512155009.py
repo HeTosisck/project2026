@@ -1,32 +1,15 @@
-import os
-from dotenv import load_dotenv
-
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_from_directory
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
-
 from models import db, User, Project, ProjectLog
-
-load_dotenv()
+import os
 
 app = Flask(__name__)
-
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_dev_key')
+app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///workshop.db'
-
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx'}
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 db.init_app(app)
-with app.app_context():
-    db.create_all()
-
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
@@ -34,20 +17,18 @@ login_manager.login_view = 'login'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# --- Auth Routes ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
         user = User.query.filter_by(username=username).first()
-        
         if user and check_password_hash(user.password, password):
             login_user(user)
             return redirect(url_for('index'))
         else:
             flash('Invalid username or password')
-            
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -66,7 +47,6 @@ def register():
         db.session.commit()
         
         return redirect(url_for('login'))
-        
     return render_template('register.html')
 
 @app.route('/logout')
@@ -75,12 +55,13 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+# --- API Эндпоинт (REST) ---
 @app.route('/api/v1/projects', methods=['GET'])
-@login_required
 def get_projects_api():
     projects = Project.query.all()
     return jsonify([{'id': p.id, 'title': p.title} for p in projects])
 
+# --- Веб-страницы ---
 @app.route('/')
 @login_required
 def index():
@@ -104,41 +85,38 @@ def create_project():
     flash(f'Project "{title}" created successfully!')
     return redirect(url_for('index'))
 
+from werkzeug.utils import secure_filename
+from flask import send_from_directory
+
 @app.route('/project/<int:project_id>')
 @login_required
 def view_project(project_id):
     project = Project.query.get_or_404(project_id)
-    
     if project.user_id != current_user.id:
         flash('Access denied.')
         return redirect(url_for('index'))
-        
     return render_template('project.html', project=project)
 
 @app.route('/project/<int:project_id>/add_log', methods=['POST'])
 @login_required
 def add_log(project_id):
     project = Project.query.get_or_404(project_id)
-    
     if project.user_id != current_user.id:
         flash('Access denied.')
         return redirect(url_for('index'))
         
     content = request.form.get('content', '')
-    file_path = None
     
+    file_path = None
     if 'file' in request.files:
         file = request.files['file']
         if file.filename != '':
             if not allowed_file(file.filename):
                 flash(f'Invalid file type. Allowed: {", ".join(ALLOWED_EXTENSIONS)}')
                 return redirect(url_for('view_project', project_id=project.id))
-                
             filename = secure_filename(file.filename)
             upload_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'])
-            
             os.makedirs(upload_path, exist_ok=True)
-            
             file.save(os.path.join(upload_path, filename))
             file_path = filename
             
@@ -165,7 +143,6 @@ def download_file(name):
 @login_required
 def delete_project(project_id):
     project = Project.query.get_or_404(project_id)
-    
     if project.user_id != current_user.id:
         flash('Access denied.')
         return redirect(url_for('index'))
@@ -179,7 +156,6 @@ def delete_project(project_id):
         
     db.session.delete(project)
     db.session.commit()
-    
     flash(f'Project "{project.title}" deleted.')
     return redirect(url_for('index'))
 
@@ -188,7 +164,6 @@ def delete_project(project_id):
 def delete_log(log_id):
     log = ProjectLog.query.get_or_404(log_id)
     project = log.project
-    
     if project.user_id != current_user.id:
         flash('Access denied.')
         return redirect(url_for('index'))
@@ -200,9 +175,13 @@ def delete_log(log_id):
             
     db.session.delete(log)
     db.session.commit()
-    
     flash('Log deleted.')
     return redirect(url_for('view_project', project_id=project.id))
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
+p.app_context():
+        db.create_all()
     app.run(debug=True)
