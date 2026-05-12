@@ -42,7 +42,12 @@
                 {% for log in project.logs|sort(attribute='timestamp', reverse=True) %}
                 <div class="card mb-3">
                     <div class="card-body">
-                        <small class="text-muted float-end">{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                        <div class="float-end text-end">
+                            <small class="text-muted d-block mb-1">{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                            <form action="/log/{{ log.id }}/delete" method="POST" style="display:inline;" onsubmit="return confirm('Delete this log and its attached file?');">
+                                <button type="submit" class="btn btn-sm btn-danger py-0 px-2" title="Delete Log">X</button>
+                            </form>
+                        </div>
                         <p class="card-text">{{ log.content }}</p>
                         {% if log.image_path %}
                         <div class="mt-2">
