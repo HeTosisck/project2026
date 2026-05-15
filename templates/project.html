@@ -21,6 +21,7 @@
                     <li class="nav-item align-self-center mx-3"><span class="text-primary fw-bold">{{ current_user.username }}</span></li>
                     {% endif %}
                     <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/my_requests">My Requests</a></li>
                 </ul>
             </div>
         </div>
@@ -42,6 +43,30 @@
             <p class="text-muted">{{ project.description }}</p>
         </div>
 
+        <!-- Блок для не-участников: предложение отправить заявку -->
+        {% if not is_owner and not is_member %}
+        <div class="alert alert-info">
+            You are not a member of this project.
+            <form action="/project/{{ project.id }}/request_join" method="POST" style="display:inline;">
+                <button type="submit" class="btn btn-primary btn-sm">Request to Join</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Кнопки управления для владельца -->
+        {% if is_owner %}
+        <div class="mb-3">
+            <a href="/project/{{ project.id }}/requests" class="btn btn-warning">Manage Join Requests</a>
+            <a href="/project/{{ project.id }}/members" class="btn btn-info">View Members</a>
+        </div>
+        {% elif is_member %}
+        <div class="mb-3">
+            <a href="/project/{{ project.id }}/members" class="btn btn-info">View Members</a>
+        </div>
+        {% endif %}
+
+        <!-- Основной контент: виден только владельцу и участникам -->
+        {% if is_owner or is_member %}
         <div class="row">
             <div class="col-md-8">
                 <h4>Project Logs & Files</h4>
@@ -88,6 +113,9 @@
                 </div>
             </div>
         </div>
+        {% else %}
+        <div class="alert alert-secondary">You are not a member of this project. Please request access above.</div>
+        {% endif %}
     </div>
 
     <!-- Bootstrap JS -->
@@ -98,11 +126,38 @@
         }
     </script>
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-</body>
-</html>
-ement');
-        }
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form[action*="/add_log"]');
+            if (!form) return;
+
+            const allowedExtensions = ['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx'];
+
+            form.addEventListener('submit', function(e) {
+                const fileInput = form.querySelector('input[type="file"]');
+                if (fileInput && fileInput.files.length > 0) {
+                    const fileName = fileInput.files[0].name;
+                    const ext = fileName.split('.').pop().toLowerCase();
+                    if (!allowedExtensions.includes(ext)) {
+                        const userConfirmed = confirm(
+                            `Файл "${fileName}" имеет неизвестное расширение "${ext}".\n` +
+                            `Разрешённые форматы: ${allowedExtensions.join(', ')}.\n\n` +
+                            `Вы уверены, что хотите загрузить этот файл?`
+                        );
+                        if (!userConfirmed) {
+                            e.preventDefault();
+                            return false;
+                        } else {
+                            const hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.name = 'confirm_unsafe';
+                            hiddenInput.value = '1';
+                            form.appendChild(hiddenInput);
+                        }
+                    }
+                }
+            });
+        });
     </script>
-    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>

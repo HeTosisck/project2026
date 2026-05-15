@@ -6,7 +6,7 @@ from flask_login import LoginManager, login_user, login_required, logout_user, c
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-from models import db, User, Project, ProjectLog
+from models import db, User, Project, ProjectLog, ProjectJoinRequest, ProjectMember
 
 load_dotenv()
 
@@ -84,8 +84,11 @@ def get_projects_api():
 @app.route('/')
 @login_required
 def index():
-    user_projects = Project.query.filter_by(user_id=current_user.id).all()
-    return render_template('index.html', projects=user_projects)
+    owned = Project.query.filter_by(user_id=current_user.id).all()
+    member_projects = [m.project for m in ProjectMember.query.filter_by(user_id=current_user.id).all()]
+    # объединяем без дубликатов
+    all_projects = owned + [p for p in member_projects if p not in owned]
+    return render_template('index.html', projects=all_projects)
 
 @app.route('/create_project', methods=['POST'])
 @login_required
@@ -108,19 +111,18 @@ def create_project():
 @login_required
 def view_project(project_id):
     project = Project.query.get_or_404(project_id)
-    
-    if project.user_id != current_user.id:
-        flash('Access denied.')
-        return redirect(url_for('index'))
-        
-    return render_template('project.html', project=project)
+    is_owner = (project.user_id == current_user.id)
+    is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=current_user.id).first() is not None
+    return render_template('project.html', project=project, is_owner=is_owner, is_member=is_member)
+
 
 @app.route('/project/<int:project_id>/add_log', methods=['POST'])
 @login_required
 def add_log(project_id):
     project = Project.query.get_or_404(project_id)
-    
-    if project.user_id != current_user.id:
+    is_owner = (project.user_id == current_user.id)
+    is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=current_user.id).first() is not None
+    if not (is_owner or is_member):
         flash('Access denied.')
         return redirect(url_for('index'))
         
@@ -130,15 +132,14 @@ def add_log(project_id):
     if 'file' in request.files:
         file = request.files['file']
         if file.filename != '':
-            if not allowed_file(file.filename):
+            confirm_unsafe = request.form.get('confirm_unsafe') == '1'
+            if not allowed_file(file.filename) and not confirm_unsafe:
                 flash(f'Invalid file type. Allowed: {", ".join(ALLOWED_EXTENSIONS)}')
                 return redirect(url_for('view_project', project_id=project.id))
-                
+            # Даже если расширение не разрешено, но confirm_unsafe == 1, продолжаем
             filename = secure_filename(file.filename)
             upload_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'])
-            
             os.makedirs(upload_path, exist_ok=True)
-            
             file.save(os.path.join(upload_path, filename))
             file_path = filename
             
@@ -159,6 +160,16 @@ def add_log(project_id):
 @app.route('/uploads/<name>')
 @login_required
 def download_file(name):
+    log = ProjectLog.query.filter_by(image_path=name).first()
+    if not log:
+        flash('File not found.')
+        return redirect(url_for('index'))
+    project = log.project
+    is_owner = (project.user_id == current_user.id)
+    is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=current_user.id).first() is not None
+    if not (is_owner or is_member):
+        flash('Access denied.')
+        return redirect(url_for('index'))
     return send_from_directory(os.path.join(app.root_path, app.config['UPLOAD_FOLDER']), name)
 
 @app.route('/project/<int:project_id>/delete', methods=['POST'])
@@ -188,8 +199,9 @@ def delete_project(project_id):
 def delete_log(log_id):
     log = ProjectLog.query.get_or_404(log_id)
     project = log.project
-    
-    if project.user_id != current_user.id:
+    is_owner = (project.user_id == current_user.id)
+    is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=current_user.id).first() is not None
+    if not (is_owner or is_member):
         flash('Access denied.')
         return redirect(url_for('index'))
         
@@ -203,6 +215,123 @@ def delete_log(log_id):
     
     flash('Log deleted.')
     return redirect(url_for('view_project', project_id=project.id))
+
+@app.route('/project/<int:project_id>/request_join', methods=['POST'])
+@login_required
+def request_join(project_id):
+    project = Project.query.get_or_404(project_id)
+    if project.user_id == current_user.id:
+        flash('You are the owner of this project.')
+        return redirect(url_for('view_project', project_id=project.id))
+    
+    existing_member = ProjectMember.query.filter_by(project_id=project.id, user_id=current_user.id).first()
+    if existing_member:
+        flash('You are already a member.')
+        return redirect(url_for('view_project', project_id=project.id))
+    
+    pending = ProjectJoinRequest.query.filter_by(project_id=project.id, user_id=current_user.id, status='pending').first()
+    if pending:
+        flash('You already have a pending request.')
+        return redirect(url_for('view_project', project_id=project.id))
+    
+    new_req = ProjectJoinRequest(project_id=project.id, user_id=current_user.id)
+    db.session.add(new_req)
+    db.session.commit()
+    flash('Join request sent to project owner.')
+    return redirect(url_for('view_project', project_id=project.id))
+
+@app.route('/project/<int:project_id>/requests')
+@login_required
+def view_requests(project_id):
+    project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        flash('Access denied.')
+        return redirect(url_for('index'))
+    pending_requests = ProjectJoinRequest.query.filter_by(project_id=project.id, status='pending').all()
+    return render_template('requests.html', project=project, requests=pending_requests)
+
+@app.route('/project/<int:project_id>/requests/<int:request_id>/approve', methods=['POST'])
+@login_required
+def approve_request(project_id, request_id):
+    project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        flash('Access denied.')
+        return redirect(url_for('index'))
+    req = ProjectJoinRequest.query.get_or_404(request_id)
+    if req.project_id != project.id or req.status != 'pending':
+        flash('Invalid request.')
+        return redirect(url_for('view_requests', project_id=project.id))
+    member = ProjectMember(project_id=project.id, user_id=req.user_id)
+    db.session.add(member)
+    req.status = 'approved'
+    db.session.commit()
+    flash(f'User {req.user.username} added to project.')
+    return redirect(url_for('view_requests', project_id=project.id))
+
+@app.route('/project/<int:project_id>/requests/<int:request_id>/reject', methods=['POST'])
+@login_required
+def reject_request(project_id, request_id):
+    project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        flash('Access denied.')
+        return redirect(url_for('index'))
+    req = ProjectJoinRequest.query.get_or_404(request_id)
+    if req.project_id != project.id:
+        flash('Invalid request.')
+        return redirect(url_for('view_requests', project_id=project.id))
+    req.status = 'rejected'
+    db.session.commit()
+    flash('Request rejected.')
+    return redirect(url_for('view_requests', project_id=project.id))
+
+@app.route('/project/<int:project_id>/members')
+@login_required
+def project_members(project_id):
+    project = Project.query.get_or_404(project_id)
+    is_owner = (project.user_id == current_user.id)
+    is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=current_user.id).first() is not None
+    if not (is_owner or is_member):
+        flash('Access denied.')
+        return redirect(url_for('index'))
+    members = ProjectMember.query.filter_by(project_id=project.id).all()
+    return render_template('members.html', project=project, members=members, is_owner=is_owner)
+
+@app.route('/project/<int:project_id>/remove_member/<int:member_id>', methods=['POST'])
+@login_required
+def remove_member(project_id, member_id):
+    project = Project.query.get_or_404(project_id)
+    if project.user_id != current_user.id:
+        flash('Access denied.')
+        return redirect(url_for('index'))
+    member = ProjectMember.query.get_or_404(member_id)
+    if member.project_id != project.id:
+        flash('Member does not belong to this project.')
+        return redirect(url_for('project_members', project_id=project.id))
+    db.session.delete(member)
+    db.session.commit()
+    flash('Member removed.')
+    return redirect(url_for('project_members', project_id=project.id))
+
+@app.route('/my_requests')
+@login_required
+def my_requests():
+    requests = ProjectJoinRequest.query.filter_by(user_id=current_user.id).order_by(ProjectJoinRequest.created_at.desc()).all()
+    return render_template('my_requests.html', requests=requests)
+
+@app.route('/cancel_request/<int:request_id>', methods=['POST'])
+@login_required
+def cancel_request(request_id):
+    req = ProjectJoinRequest.query.get_or_404(request_id)
+    if req.user_id != current_user.id:
+        flash('You cannot cancel this request.')
+        return redirect(url_for('my_requests'))
+    if req.status != 'pending':
+        flash('Only pending requests can be cancelled.')
+        return redirect(url_for('my_requests'))
+    db.session.delete(req)
+    db.session.commit()
+    flash('Request cancelled.')
+    return redirect(url_for('my_requests'))
 
 if __name__ == '__main__':
     app.run(debug=True)
