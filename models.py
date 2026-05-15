@@ -12,6 +12,7 @@ class User(db.Model, UserMixin):
     avatar = db.Column(db.String(200), default='default_avatar.png')
     bio = db.Column(db.Text, default='')
     projects = db.relationship('Project', backref='owner', lazy=True)
+    theme = db.Column(db.String(20), default='light')
     
 
 class Project(db.Model):

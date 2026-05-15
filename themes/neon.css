@@ -1,0 +1,58 @@
+body {
+    background: linear-gradient(135deg, #0a0a2a, #1a0033);
+    color: #0ff;
+    font-family: 'Courier New', monospace;
+    animation: bgPulse 6s infinite alternate;
+}
+@keyframes bgPulse {
+    0% { background: linear-gradient(135deg, #0a0a2a, #1a0033); }
+    100% { background: linear-gradient(135deg, #1a0033, #0a0a2a); }
+}
+.navbar-dark.bg-dark {
+    background: #000 !important;
+    border-bottom: 2px solid #0ff;
+    box-shadow: 0 0 15px #0ff;
+    animation: borderGlow 2s infinite alternate;
+}
+@keyframes borderGlow {
+    from { box-shadow: 0 0 5px #0ff; border-bottom-color: #0ff; }
+    to { box-shadow: 0 0 20px #f0f; border-bottom-color: #f0f; }
+}
+.card {
+    background: rgba(0,0,0,0.7);
+    border: 1px solid #0ff;
+    border-radius: 15px;
+    backdrop-filter: blur(4px);
+    transition: 0.3s;
+    color: #0ff;
+}
+.card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 25px #0ff;
+    border-color: #f0f;
+}
+.btn-primary {
+    background: transparent;
+    border: 2px solid #0ff;
+    color: #0ff;
+    font-weight: bold;
+    transition: 0.2s;
+}
+.btn-primary:hover {
+    background: #0ff;
+    color: #000;
+    box-shadow: 0 0 15px #0ff;
+}
+h1, h2, h3, h4 {
+    text-shadow: 0 0 5px #0ff, 0 0 10px #0ff;
+    animation: textGlow 1.5s infinite alternate;
+}
+@keyframes textGlow {
+    from { text-shadow: 0 0 2px #0ff; }
+    to { text-shadow: 0 0 10px #f0f; }
+}
+.alert-info {
+    background: rgba(0,255,255,0.1);
+    border-left: 5px solid #0ff;
+    color: #0ff;
+}

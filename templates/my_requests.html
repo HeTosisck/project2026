@@ -1,65 +1,35 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Join Requests - Workshop Manager</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">Workshop Manager</a>
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="/">My Projects</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/my_requests">My Requests</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-    <div class="container mt-4">
-        <h2>My Join Requests</h2>
-        {% if requests %}
-            <table class="table table-striped mt-3">
-                <thead>
-                    <tr>
-                        <th>Project</th>
-                        <th>Status</th>
-                        <th>Requested on</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for req in requests %}
-                    <tr>
-                        <td><a href="/project/{{ req.project.id }}">{{ req.project.title }}</a></td>
-                        <td>
-                            {% if req.status == 'pending' %}
-                                <span class="badge bg-warning">Pending</span>
-                            {% elif req.status == 'approved' %}
-                                <span class="badge bg-success">Approved</span>
-                            {% else %}
-                                <span class="badge bg-danger">Rejected</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ req.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                        <td>
-                            {% if req.status == 'pending' %}
-                                <form action="/cancel_request/{{ req.id }}" method="POST" style="display:inline;">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Cancel this request?')">Cancel</button>
-                                </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <div class="alert alert-info">You haven't sent any join requests yet.</div>
-        {% endif %}
-        <a href="/" class="btn btn-secondary">Back to Home</a>
-    </div>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}My Join Requests{% endblock %}
+{% block content %}
+<h2>My Join Requests</h2>
+{% if requests %}
+    <table class="table table-striped mt-3">
+        <thead>
+            <tr><th>Project</th><th>Status</th><th>Requested on</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+            {% for req in requests %}
+            <tr>
+                <td><a href="/project/{{ req.project.id }}">{{ req.project.title }}</a></td>
+                <td>
+                    {% if req.status == 'pending' %}<span class="badge bg-warning">Pending</span>
+                    {% elif req.status == 'approved' %}<span class="badge bg-success">Approved</span>
+                    {% else %}<span class="badge bg-danger">Rejected</span>{% endif %}
+                </td>
+                <td>{{ req.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    {% if req.status == 'pending' %}
+                    <form action="/cancel_request/{{ req.id }}" method="POST" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Cancel this request?')">Cancel</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="alert alert-info">You haven't sent any join requests yet.</div>
+{% endif %}
+<a href="/" class="btn btn-secondary">Back to Home</a>
+{% endblock %}

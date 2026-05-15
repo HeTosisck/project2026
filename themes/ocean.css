@@ -1,0 +1,72 @@
+@keyframes oceanWave {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 100% 0%; }
+    100% { background-position: 200% 0%; }
+}
+@keyframes floatGlow {
+    0% { box-shadow: 0 8px 20px rgba(0,150,200,0.2); }
+    50% { box-shadow: 0 12px 30px rgba(0,180,230,0.6); }
+    100% { box-shadow: 0 8px 20px rgba(0,150,200,0.2); }
+}
+body {
+    background: linear-gradient(120deg, #003d4d, #006b7f, #0099b3, #006b7f);
+    background-size: 300% 300%;
+    animation: oceanWave 12s ease infinite;
+    color: #ffffff;
+    font-family: 'Segoe UI', 'Poppins', system-ui;
+    transition: background 0.3s;
+}
+.navbar-dark.bg-dark {
+    background: #002b36 !important;
+    box-shadow: 0 4px 15px rgba(0,150,200,0.3);
+    border-bottom: 1px solid #20b2aa;
+}
+.card {
+    background: rgba(0,43,54,0.75);
+    backdrop-filter: blur(8px);
+    border: 1px solid #20b2aa;
+    border-radius: 24px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    transition: all 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
+    color: #e6f7ff;
+}
+.card:hover {
+    transform: translateY(-6px);
+    animation: floatGlow 1.5s infinite;
+    border-color: #7fffd4;
+}
+.card-title, .card-text {
+    color: #ffffff;
+}
+.btn-primary {
+    background: linear-gradient(45deg, #00b4d8, #0077b6);
+    border: none;
+    border-radius: 40px;
+    font-weight: bold;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,180,216,0.3);
+}
+.btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px #00b4d8;
+    background: linear-gradient(45deg, #00c8e8, #0088c8);
+}
+.btn-outline-primary {
+    color: #7fffd4;
+    border-color: #20b2aa;
+}
+.btn-outline-primary:hover {
+    background: #20b2aa;
+    color: #002b36;
+}
+h1, h2, h3, h4 {
+    text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    color: #ffffff;
+}
+.alert-info {
+    background: rgba(0,255,255,0.15);
+    border-left: 8px solid #20b2aa;
+    color: #e0f7ff;
+    border-radius: 16px;
+    backdrop-filter: blur(4px);
+}

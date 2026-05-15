@@ -1,0 +1,44 @@
+/* Гламурная тема с анимациями и свечением */
+body {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    color: #fde68a;
+    font-family: 'Segoe UI', 'Poppins', system-ui;
+    transition: all 0.3s ease;
+}
+.navbar-dark.bg-dark {
+    background: linear-gradient(90deg, #0f0c29, #302b63, #24243e) !important;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+.card {
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(6px);
+    border: 1px solid #ffd966;
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+}
+.btn-primary {
+    background: linear-gradient(45deg, #ffb347, #ffcc33);
+    border: none;
+    color: #1e1b4b;
+    font-weight: bold;
+    text-shadow: 0 0 2px white;
+    transition: 0.2s;
+}
+.btn-primary:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 20px #ffcc33;
+}
+h1, h2, h3, h4 {
+    text-shadow: 0 0 5px gold;
+}
+.alert-info {
+    background: rgba(255, 215, 0, 0.15);
+    border-left: 8px solid #ffd966;
+    color: #fff2c9;
+    border-radius: 12px;
+}

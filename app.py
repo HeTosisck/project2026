@@ -52,6 +52,10 @@ def login():
             
     return render_template('login.html')
 
+@app.route('/theme/<path:filename>')
+def serve_theme(filename):
+    return send_from_directory('themes', filename)
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -406,6 +410,20 @@ def is_password_strong(password):
     if not any(c.isdigit() for c in password):
         return False, "Password must contain at least one digit."
     return True, ""
+
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    if request.method == 'POST':
+        theme = request.form.get('theme')
+        if theme in ['light', 'dark', 'glamour', 'neon', 'matrix', 'ocean']:
+            current_user.theme = theme
+            db.session.commit()
+            flash('Theme updated successfully.')
+        else:
+            flash('Invalid theme selection.')
+        return redirect(url_for('settings'))
+    return render_template('settings.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
