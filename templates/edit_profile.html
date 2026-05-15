@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">Workshop Manager</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+        
+        <h2>Edit Profile</h2>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="bio" class="form-label">Bio</label>
+                <textarea class="form-control" id="bio" name="bio" rows="3">{{ user.bio or '' }}</textarea>
+            </div>
+            <div class="mb-3">
+                <label for="avatar" class="form-label">Avatar (jpg, png, gif)</label>
+                <input class="form-control" type="file" name="avatar" id="avatar">
+                <small class="text-muted">Leave empty to keep current avatar.</small>
+            </div>
+            <hr>
+            <h5>Change Password (optional)</h5>
+            <div class="mb-3">
+                <label for="old_password" class="form-label">Old Password</label>
+                <input type="password" class="form-control" id="old_password" name="old_password">
+            </div>
+            <div class="mb-3">
+                <label for="new_password" class="form-label">New Password</label>
+                <input type="password" class="form-control" id="new_password" name="new_password">
+            </div>
+            <div class="mb-3">
+                <label for="confirm_password" class="form-label">Confirm New Password</label>
+                <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+            </div>
+            <button type="submit" class="btn btn-success">Save Changes</button>
+            <a href="{{ url_for('profile', user_id=user.id) }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</body>
+</html>

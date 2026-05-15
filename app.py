@@ -8,6 +8,8 @@ from werkzeug.utils import secure_filename
 
 from models import db, User, Project, ProjectLog, ProjectJoinRequest, ProjectMember
 
+from datetime import datetime
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -60,13 +62,15 @@ def register():
         if user:
             flash('Username already exists')
             return redirect(url_for('register'))
-            
+        strong, msg = is_password_strong(password)
+        if not strong:
+            flash(msg)
+            return redirect(url_for('register'))
+        
         new_user = User(username=username, password=generate_password_hash(password))
         db.session.add(new_user)
         db.session.commit()
-        
         return redirect(url_for('login'))
-        
     return render_template('register.html')
 
 @app.route('/logout')
@@ -332,6 +336,76 @@ def cancel_request(request_id):
     db.session.commit()
     flash('Request cancelled.')
     return redirect(url_for('my_requests'))
+
+@app.route('/profile/<int:user_id>')
+@login_required
+def profile(user_id):
+    user = User.query.get_or_404(user_id)
+    return render_template('profile.html', profile_user=user)
+
+@app.route('/profile/edit', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    if request.method == 'POST':
+        new_username = request.form.get('username')
+        if new_username and new_username != current_user.username:
+            existing = User.query.filter_by(username=new_username).first()
+            if existing:
+                flash('Username already taken.')
+                return redirect(url_for('edit_profile'))
+            current_user.username = new_username
+        
+        old_password = request.form.get('old_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        if old_password and new_password:
+            if not check_password_hash(current_user.password, old_password):
+                flash('Old password is incorrect.')
+                return redirect(url_for('edit_profile'))
+                if new_password != confirm_password:
+                    flash('New passwords do not match.')
+                    return redirect(url_for('edit_profile'))
+                strong, msg = is_password_strong(new_password)
+                if not strong:
+                    flash(msg)
+                    return redirect(url_for('edit_profile'))
+                current_user.password = generate_password_hash(new_password)
+        bio = request.form.get('bio')
+        current_user.bio = bio
+        
+        if 'avatar' in request.files:
+            file = request.files['avatar']
+            if file and file.filename != '':
+                if allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    name, ext = os.path.splitext(filename)
+                    filename = f"avatar_{current_user.id}_{int(datetime.now().timestamp())}{ext}"
+                    upload_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], 'avatars')
+                    os.makedirs(upload_path, exist_ok=True)
+                    file.save(os.path.join(upload_path, filename))
+                    current_user.avatar = filename
+                else:
+                    flash('Invalid file type for avatar. Allowed: png, jpg, jpeg, gif')
+                    return redirect(url_for('edit_profile'))
+        db.session.commit()
+        flash('Profile updated successfully.')
+        return redirect(url_for('profile', user_id=current_user.id))
+    return render_template('edit_profile.html', user=current_user)
+
+@app.route('/avatars/<name>')
+@login_required
+def get_avatar(name):
+    return send_from_directory(os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], 'avatars'), name)
+
+def is_password_strong(password):
+    """Возвращает (bool, сообщение_об_ошибке)"""
+    if len(password) < 6:
+        return False, "Password must be at least 6 characters long."
+    if not any(c.isalpha() for c in password):
+        return False, "Password must contain at least one letter."
+    if not any(c.isdigit() for c in password):
+        return False, "Password must contain at least one digit."
+    return True, ""
 
 if __name__ == '__main__':
     app.run(debug=True)

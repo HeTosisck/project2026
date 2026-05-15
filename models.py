@@ -8,7 +8,11 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    avatar = db.Column(db.String(200), default='default_avatar.png')
+    bio = db.Column(db.Text, default='')
     projects = db.relationship('Project', backref='owner', lazy=True)
+    
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
