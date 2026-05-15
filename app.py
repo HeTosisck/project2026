@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-
+import requests
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_from_directory
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -424,6 +424,32 @@ def settings():
             flash('Invalid theme selection.')
         return redirect(url_for('settings'))
     return render_template('settings.html')
+
+@app.route('/api/weather')
+def get_weather():
+    lat = request.args.get('lat')
+    lon = request.args.get('lon')
+    if not lat or not lon:
+        return jsonify({'error': 'No coordinates'}), 400
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true&timezone=auto"
+    try:
+        response = requests.get(url, timeout=5)
+        data = response.json()
+        current = data.get('current_weather', {})
+        temp = current.get('temperature')
+        weathercode = current.get('weathercode')
+        #https://open-meteo.com/en/docs
+        #0=ясно, 1-3=облачно, 45-48=туман, 51-67=дождь, 71-77=снег, 80-99=гроза/ливень
+        if temp is not None:
+            return jsonify({
+                'temp': temp,
+                'weathercode': weathercode,
+                'units': '°C'
+            })
+        else:
+            return jsonify({'error': 'No weather data'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
