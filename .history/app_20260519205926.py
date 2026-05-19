@@ -451,11 +451,6 @@ def edit_profile():
                     upload_path = os.path.join(
                         app.root_path, app.config['UPLOAD_FOLDER'], 'avatars')
                     os.makedirs(upload_path, exist_ok=True)
-                    if current_user.avatar and current_user.avatar != 'default_avatar.png':
-                        old_path = os.path.join(upload_path, current_user.avatar)
-                        if os.path.exists(old_path):
-                            os.remove(old_path)
-
                     file.save(os.path.join(upload_path, filename))
                     current_user.avatar = filename
                 else:
