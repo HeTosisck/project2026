@@ -1,35 +1,53 @@
 {% extends "base.html" %}
-{% block title %}Settings{% endblock %}
+{% block title %}{{ _('settings') }}{% endblock %}
 {% block content %}
-<h2>Appearance Settings</h2>
-<form method="POST">
-    <div class="mb-3">
-        <label class="form-label">Choose theme:</label>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="theme" value="light" id="themeLight" {% if current_user.theme == 'light' %}checked{% endif %}>
-            <label class="form-check-label" for="themeLight">Light</label>
-        </div>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="theme" value="dark" id="themeDark" {% if current_user.theme == 'dark' %}checked{% endif %}>
-            <label class="form-check-label" for="themeDark">Dark</label>
-        </div>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="theme" value="glamour" id="themeGlamour" {% if current_user.theme == 'glamour' %}checked{% endif %}>
-            <label class="form-check-label" for="themeGlamour">Glamour (with animations and glow)</label>
-        </div>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="theme" value="neon" id="themeNeon" {% if current_user.theme == 'neon' %}checked{% endif %}>
-            <label class="form-check-label" for="themeNeon">Neon (pulsing glow, cyberpunk)</label>
-        </div>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="theme" value="matrix" id="themeMatrix" {% if current_user.theme == 'matrix' %}checked{% endif %}>
-            <label class="form-check-label" for="themeMatrix">Matrix (green code rain style)</label>
-        </div>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="theme" value="ocean" id="themeOcean" {% if current_user.theme == 'ocean' %}checked{% endif %}>
-            <label class="form-check-label" for="themeOcean">Ocean (animated waves)</label>
-        </div>
+<h2>{{ _('appearance_lang') }}</h2>
+<div class="card shadow-sm mt-3">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">{{ _('choose_theme') }}</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="theme" value="light" id="themeLight" {% if current_user.theme == 'light' %}checked{% endif %}>
+                        <label class="form-check-label" for="themeLight">{{ _('theme_light') }}</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="theme" value="dark" id="themeDark" {% if current_user.theme == 'dark' %}checked{% endif %}>
+                        <label class="form-check-label" for="themeDark">{{ _('theme_dark') }}</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="theme" value="glamour" id="themeGlamour" {% if current_user.theme == 'glamour' %}checked{% endif %}>
+                        <label class="form-check-label" for="themeGlamour">{{ _('theme_glamour') }}</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="theme" value="neon" id="themeNeon" {% if current_user.theme == 'neon' %}checked{% endif %}>
+                        <label class="form-check-label" for="themeNeon">{{ _('theme_neon') }}</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="theme" value="matrix" id="themeMatrix" {% if current_user.theme == 'matrix' %}checked{% endif %}>
+                        <label class="form-check-label" for="themeMatrix">{{ _('theme_matrix') }}</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="theme" value="ocean" id="themeOcean" {% if current_user.theme == 'ocean' %}checked{% endif %}>
+                        <label class="form-check-label" for="themeOcean">{{ _('theme_ocean') }}</label>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">{{ _('choose_lang') }}</label>
+                    <select class="form-select" name="language">
+                        <option value="en" {% if current_user.language == 'en' %}selected{% endif %}>English</option>
+                        <option value="ru" {% if current_user.language == 'ru' %}selected{% endif %}>Русский</option>
+                        <option value="es" {% if current_user.language == 'es' %}selected{% endif %}>Español</option>
+                        <option value="fr" {% if current_user.language == 'fr' %}selected{% endif %}>Français</option>
+                        <option value="de" {% if current_user.language == 'de' %}selected{% endif %}>Deutsch</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">{{ _('save_settings') }}</button>
+            </div>
+        </form>
     </div>
-    <button type="submit" class="btn btn-primary">Save theme</button>
-</form>
+</div>
 {% endblock %}

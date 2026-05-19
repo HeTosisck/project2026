@@ -13,7 +13,7 @@ class User(db.Model, UserMixin):
     bio = db.Column(db.Text, default='')
     projects = db.relationship('Project', backref='owner', lazy=True)
     theme = db.Column(db.String(20), default='light')
-    
+    language = db.Column(db.String(10), default='en')
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -40,10 +40,8 @@ class ProjectJoinRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    status = db.Column(db.String(20), default='pending')  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # relationships
     project = db.relationship('Project', backref='join_requests')
     user = db.relationship('User', backref='project_requests')
 
@@ -51,10 +49,7 @@ class ProjectMember(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    role = db.Column(db.String(20), default='member')  # member
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
     __table_args__ = (db.UniqueConstraint('project_id', 'user_id', name='unique_project_member'),)
-    
     project = db.relationship('Project', backref='members')
     user = db.relationship('User', backref='project_memberships')

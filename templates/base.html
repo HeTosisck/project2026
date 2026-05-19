@@ -1,12 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Workshop Manager{% endblock %}</title>
-    <!-- Bootstrap CSS -->
+    <title>{% block title %}{{ _('app_name') }}{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Пользовательская тема -->
     {% if current_user.is_authenticated and current_user.theme %}
         <link rel="stylesheet" href="{{ url_for('serve_theme', filename=current_user.theme + '.css') }}">
     {% else %}
@@ -17,111 +15,37 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="/">Workshop Manager</a>
+            <a class="navbar-brand" href="/">{{ _('app_name') }}</a>
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="/">My Projects</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/my_requests">My Requests</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/">{{ _('my_projects') }}</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/my_requests">{{ _('my_requests') }}</a></li>
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('profile', user_id=current_user.id) }}">{{ current_user.username }}</a>
                     </li>
-                    <li class="nav-item"><a class="nav-link" href="/settings">Settings</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
-                    <li class="nav-item align-self-center me-3" id="weather-container">
-                        <div id="weather-widget" style="min-width: 120px; text-align: right;">
-                            <span class="text-light">🌡️ Загрузка...</span>
-                        </div>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="/settings">{{ _('settings') }}</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout">{{ _('logout') }}</a></li>
                     {% endif %}
                 </ul>
             </div>
         </div>
     </nav>
     <div class="container mt-4">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
         {% block content %}{% endblock %}
     </div>
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     {% block scripts %}
-<li class="nav-item align-self-center me-3" id="weather-container">
-    <div id="weather-widget" style="min-width: 150px; text-align: right;">
-        <span class="text-light">🌡️ Загрузка...</span>
-    </div>
-</li>
-
-<script>
-    function getWeatherIcon(code) {
-        const codes = {
-            0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
-            45: '🌫️', 48: '🌫️', 51: '🌧️', 53: '🌧️', 55: '🌧️',
-            56: '🌨️', 57: '🌨️', 61: '🌧️', 63: '🌧️', 65: '🌧️',
-            66: '🌨️', 67: '🌨️', 71: '❄️', 73: '❄️', 75: '❄️',
-            77: '❄️', 80: '🌦️', 81: '🌦️', 82: '🌦️', 85: '🌨️',
-            86: '🌨️', 95: '⛈️', 96: '⛈️', 99: '⛈️'
-        };
-        return codes[code] || '🌡️';
-    }
-
-    function fetchWeather(lat, lon) {
-        fetch(`/api/weather?lat=${lat}&lon=${lon}`)
-            .then(response => response.json())
-            .then(data => {
-                const widget = document.getElementById('weather-widget');
-                if (data.temp !== undefined) {
-                    const icon = getWeatherIcon(data.weathercode);
-                    widget.innerHTML = `<span style="color: #ffd966;">${icon} ${Math.round(data.temp)}${data.units}</span>`;
-                } else {
-                    widget.innerHTML = `<span class="text-muted">🌧️ Нет данных</span>`;
-                }
-            })
-            .catch(() => {
-                document.getElementById('weather-widget').innerHTML = `<span class="text-muted">⚠️ Ошибка API</span>`;
-            });
-    }
-
-    function getWeatherByCity(city, countryCode = '') {
-        const query = countryCode ? `${city},${countryCode}` : city;
-        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.results && data.results.length) {
-                    const { latitude, longitude } = data.results[0];
-                    fetchWeather(latitude, longitude);
-                } else {
-                    document.getElementById('weather-widget').innerHTML = `<span class="text-muted">🌍 Город не найден</span>`;
-                }
-            })
-            .catch(() => {
-                document.getElementById('weather-widget').innerHTML = `<span class="text-muted">🌍 Ошибка геокодинга</span>`;
-            });
-    }
-
-    if (navigator.geolocation) {
-        // Таймаут на получение геолокации (5 секунд)
-        const geoTimeout = setTimeout(() => {
-            console.warn('Геолокация не получена вовремя, используем запасной город');
-            getWeatherByCity('Moscow', 'RU');
-        }, 5000);
-
-        navigator.geolocation.getCurrentPosition(
-            position => {
-                clearTimeout(geoTimeout);
-                const { latitude, longitude } = position.coords;
-                fetchWeather(latitude, longitude);
-            },
-            error => {
-                clearTimeout(geoTimeout);
-                console.warn('Геолокация запрещена или ошибка:', error.message);
-                // Запасной город – можно поменять на свой
-                getWeatherByCity('Moscow', 'RU');
-            }
-        );
-    } else {
-        document.getElementById('weather-widget').innerHTML = `<span class="text-muted">🚫 Геолокация не поддерживается</span>`;
-        getWeatherByCity('Moscow', 'RU');
-    }
-</script>
 {% endblock %}
 </body>
 </html>

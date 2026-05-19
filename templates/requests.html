@@ -1,43 +1,27 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Join Requests - {{ project.title }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">Workshop Manager</a>
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="/project/{{ project.id }}">Back to Project</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
-                </ul>
+{% extends "base.html" %}
+{% block title %}Join Requests - {{ project.title }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Join Requests for {{ project.title }}</h2>
+    <a href="/project/{{ project.id }}" class="btn btn-secondary btn-sm">Back to Project</a>
+</div>
+{% if requests %}
+    <ul class="list-group mt-3 shadow-sm">
+    {% for req in requests %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span><strong>{{ req.user.username }}</strong> <span class="text-muted">(requested {{ req.created_at.strftime('%Y-%m-%d %H:%M') }})</span></span>
+            <div>
+                <form action="/project/{{ project.id }}/requests/{{ req.id }}/approve" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                </form>
+                <form action="/project/{{ project.id }}/requests/{{ req.id }}/reject" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                </form>
             </div>
-        </div>
-    </nav>
-    <div class="container mt-4">
-        <h2>Join Requests for {{ project.title }}</h2>
-        {% if requests %}
-            <ul class="list-group mt-3">
-            {% for req in requests %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ req.user.username }} (requested {{ req.created_at.strftime('%Y-%m-%d %H:%M') }})
-                    <div>
-                        <form action="/project/{{ project.id }}/requests/{{ req.id }}/approve" method="POST" style="display:inline;">
-                            <button type="submit" class="btn btn-success btn-sm">Approve</button>
-                        </form>
-                        <form action="/project/{{ project.id }}/requests/{{ req.id }}/reject" method="POST" style="display:inline;">
-                            <button type="submit" class="btn btn-danger btn-sm">Reject</button>
-                        </form>
-                    </div>
-                </li>
-            {% endfor %}
-            </ul>
-        {% else %}
-            <div class="alert alert-info mt-3">No pending requests.</div>
-        {% endif %}
-    </div>
-</body>
-</html>
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <div class="alert alert-info mt-3">No pending requests.</div>
+{% endif %}
+{% endblock %}

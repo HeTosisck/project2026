@@ -7,12 +7,34 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 from models import db, User, Project, ProjectLog, ProjectJoinRequest, ProjectMember
+from translations import MESSAGES
 
 from datetime import datetime
 
 load_dotenv()
 
 app = Flask(__name__)
+
+
+def get_message(key, **kwargs):
+    lang = 'en'
+    if current_user and current_user.is_authenticated and hasattr(current_user, 'language'):
+        lang = current_user.language
+    msg = MESSAGES.get(lang, MESSAGES['en']).get(key, MESSAGES['en'].get(key, key))
+    if kwargs:
+        return msg.format(**kwargs)
+    return msg
+
+@app.context_processor
+def inject_translations():
+    lang = 'en'
+    if current_user.is_authenticated and hasattr(current_user, 'language'):
+        lang = current_user.language
+        
+    def translate(key):
+        return MESSAGES.get(lang, MESSAGES['en']).get(key, MESSAGES['en'].get(key, key))
+        
+    return dict(_=translate, current_lang=lang)
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_dev_key')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///workshop.db'
@@ -41,15 +63,12 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
         user = User.query.filter_by(username=username).first()
-        
         if user and check_password_hash(user.password, password):
             login_user(user)
             return redirect(url_for('index'))
         else:
-            flash('Invalid username or password')
-            
+            flash(get_message('invalid_login'))
     return render_template('login.html')
 
 @app.route('/theme/<path:filename>')
@@ -61,16 +80,14 @@ def register():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
         user = User.query.filter_by(username=username).first()
         if user:
-            flash('Username already exists')
+            flash(get_message('username_exists'))
             return redirect(url_for('register'))
         strong, msg = is_password_strong(password)
         if not strong:
-            flash(msg)
+            flash(get_message(msg))
             return redirect(url_for('register'))
-        
         new_user = User(username=username, password=generate_password_hash(password))
         db.session.add(new_user)
         db.session.commit()
@@ -83,18 +100,11 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-@app.route('/api/v1/projects', methods=['GET'])
-@login_required
-def get_projects_api():
-    projects = Project.query.all()
-    return jsonify([{'id': p.id, 'title': p.title} for p in projects])
-
 @app.route('/')
 @login_required
 def index():
     owned = Project.query.filter_by(user_id=current_user.id).all()
     member_projects = [m.project for m in ProjectMember.query.filter_by(user_id=current_user.id).all()]
-    # объединяем без дубликатов
     all_projects = owned + [p for p in member_projects if p not in owned]
     return render_template('index.html', projects=all_projects)
 
@@ -103,16 +113,13 @@ def index():
 def create_project():
     title = request.form.get('title')
     description = request.form.get('description')
-    
     if not title:
-        flash('Project title is required!')
+        flash(get_message('project_title_req'))
         return redirect(url_for('index'))
-        
     new_project = Project(title=title, description=description, user_id=current_user.id)
     db.session.add(new_project)
     db.session.commit()
-    
-    flash(f'Project "{title}" created successfully!')
+    flash(get_message('project_created', title=title))
     return redirect(url_for('index'))
 
 @app.route('/project/<int:project_id>')
@@ -131,38 +138,30 @@ def add_log(project_id):
     is_owner = (project.user_id == current_user.id)
     is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=current_user.id).first() is not None
     if not (is_owner or is_member):
-        flash('Access denied.')
+        flash(get_message('access_denied'))
         return redirect(url_for('index'))
-        
     content = request.form.get('content', '')
     file_path = None
-    
     if 'file' in request.files:
         file = request.files['file']
         if file.filename != '':
-            confirm_unsafe = request.form.get('confirm_unsafe') == '1'
-            if not allowed_file(file.filename) and not confirm_unsafe:
-                flash(f'Invalid file type. Allowed: {", ".join(ALLOWED_EXTENSIONS)}')
+            if not allowed_file(file.filename):
+                flash(get_message('invalid_file_type', extensions=', '.join(ALLOWED_EXTENSIONS)))
                 return redirect(url_for('view_project', project_id=project.id))
-            # Даже если расширение не разрешено, но confirm_unsafe == 1, продолжаем
             filename = secure_filename(file.filename)
             upload_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'])
             os.makedirs(upload_path, exist_ok=True)
             file.save(os.path.join(upload_path, filename))
             file_path = filename
-            
     if not file_path and not content.strip():
-        flash('Log cannot be empty if no file is uploaded.')
+        flash(get_message('log_empty'))
         return redirect(url_for('view_project', project_id=project.id))
-        
     if not content.strip():
         content = "Uploaded a file"
-        
     new_log = ProjectLog(content=content, image_path=file_path, project_id=project.id)
     db.session.add(new_log)
     db.session.commit()
-    
-    flash('Log and file added successfully!')
+    flash(get_message('log_added'))
     return redirect(url_for('view_project', project_id=project.id))
 
 @app.route('/uploads/<name>')
@@ -170,13 +169,13 @@ def add_log(project_id):
 def download_file(name):
     log = ProjectLog.query.filter_by(image_path=name).first()
     if not log:
-        flash('File not found.')
+        flash(get_message('file_not_found'))
         return redirect(url_for('index'))
     project = log.project
     is_owner = (project.user_id == current_user.id)
     is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=current_user.id).first() is not None
     if not (is_owner or is_member):
-        flash('Access denied.')
+        flash(get_message('access_denied'))
         return redirect(url_for('index'))
     return send_from_directory(os.path.join(app.root_path, app.config['UPLOAD_FOLDER']), name)
 
@@ -184,22 +183,18 @@ def download_file(name):
 @login_required
 def delete_project(project_id):
     project = Project.query.get_or_404(project_id)
-    
     if project.user_id != current_user.id:
-        flash('Access denied.')
+        flash(get_message('access_denied'))
         return redirect(url_for('index'))
-    
     for log in project.logs:
         if log.image_path:
             file_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], log.image_path)
             if os.path.exists(file_path):
                 os.remove(file_path)
         db.session.delete(log)
-        
     db.session.delete(project)
     db.session.commit()
-    
-    flash(f'Project "{project.title}" deleted.')
+    flash(get_message('project_deleted', title=project.title))
     return redirect(url_for('index'))
 
 @app.route('/log/<int:log_id>/delete', methods=['POST'])
@@ -210,18 +205,15 @@ def delete_log(log_id):
     is_owner = (project.user_id == current_user.id)
     is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=current_user.id).first() is not None
     if not (is_owner or is_member):
-        flash('Access denied.')
+        flash(get_message('access_denied'))
         return redirect(url_for('index'))
-        
     if log.image_path:
         file_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], log.image_path)
         if os.path.exists(file_path):
             os.remove(file_path)
-            
     db.session.delete(log)
     db.session.commit()
-    
-    flash('Log deleted.')
+    flash(get_message('log_deleted'))
     return redirect(url_for('view_project', project_id=project.id))
 
 @app.route('/project/<int:project_id>/request_join', methods=['POST'])
@@ -229,23 +221,20 @@ def delete_log(log_id):
 def request_join(project_id):
     project = Project.query.get_or_404(project_id)
     if project.user_id == current_user.id:
-        flash('You are the owner of this project.')
+        flash(get_message('owner_join'))
         return redirect(url_for('view_project', project_id=project.id))
-    
     existing_member = ProjectMember.query.filter_by(project_id=project.id, user_id=current_user.id).first()
     if existing_member:
-        flash('You are already a member.')
+        flash(get_message('already_member'))
         return redirect(url_for('view_project', project_id=project.id))
-    
     pending = ProjectJoinRequest.query.filter_by(project_id=project.id, user_id=current_user.id, status='pending').first()
     if pending:
-        flash('You already have a pending request.')
+        flash(get_message('pending_request'))
         return redirect(url_for('view_project', project_id=project.id))
-    
     new_req = ProjectJoinRequest(project_id=project.id, user_id=current_user.id)
     db.session.add(new_req)
     db.session.commit()
-    flash('Join request sent to project owner.')
+    flash(get_message('join_request_sent'))
     return redirect(url_for('view_project', project_id=project.id))
 
 @app.route('/project/<int:project_id>/requests')
@@ -253,7 +242,7 @@ def request_join(project_id):
 def view_requests(project_id):
     project = Project.query.get_or_404(project_id)
     if project.user_id != current_user.id:
-        flash('Access denied.')
+        flash(get_message('access_denied'))
         return redirect(url_for('index'))
     pending_requests = ProjectJoinRequest.query.filter_by(project_id=project.id, status='pending').all()
     return render_template('requests.html', project=project, requests=pending_requests)
@@ -263,17 +252,17 @@ def view_requests(project_id):
 def approve_request(project_id, request_id):
     project = Project.query.get_or_404(project_id)
     if project.user_id != current_user.id:
-        flash('Access denied.')
+        flash(get_message('access_denied'))
         return redirect(url_for('index'))
     req = ProjectJoinRequest.query.get_or_404(request_id)
     if req.project_id != project.id or req.status != 'pending':
-        flash('Invalid request.')
+        flash(get_message('invalid_request'))
         return redirect(url_for('view_requests', project_id=project.id))
     member = ProjectMember(project_id=project.id, user_id=req.user_id)
     db.session.add(member)
     req.status = 'approved'
     db.session.commit()
-    flash(f'User {req.user.username} added to project.')
+    flash(get_message('user_added', username=req.user.username))
     return redirect(url_for('view_requests', project_id=project.id))
 
 @app.route('/project/<int:project_id>/requests/<int:request_id>/reject', methods=['POST'])
@@ -281,15 +270,15 @@ def approve_request(project_id, request_id):
 def reject_request(project_id, request_id):
     project = Project.query.get_or_404(project_id)
     if project.user_id != current_user.id:
-        flash('Access denied.')
+        flash(get_message('access_denied'))
         return redirect(url_for('index'))
     req = ProjectJoinRequest.query.get_or_404(request_id)
     if req.project_id != project.id:
-        flash('Invalid request.')
+        flash(get_message('invalid_request'))
         return redirect(url_for('view_requests', project_id=project.id))
     req.status = 'rejected'
     db.session.commit()
-    flash('Request rejected.')
+    flash(get_message('request_rejected'))
     return redirect(url_for('view_requests', project_id=project.id))
 
 @app.route('/project/<int:project_id>/members')
@@ -299,7 +288,7 @@ def project_members(project_id):
     is_owner = (project.user_id == current_user.id)
     is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=current_user.id).first() is not None
     if not (is_owner or is_member):
-        flash('Access denied.')
+        flash(get_message('access_denied'))
         return redirect(url_for('index'))
     members = ProjectMember.query.filter_by(project_id=project.id).all()
     return render_template('members.html', project=project, members=members, is_owner=is_owner)
@@ -309,15 +298,15 @@ def project_members(project_id):
 def remove_member(project_id, member_id):
     project = Project.query.get_or_404(project_id)
     if project.user_id != current_user.id:
-        flash('Access denied.')
+        flash(get_message('access_denied'))
         return redirect(url_for('index'))
     member = ProjectMember.query.get_or_404(member_id)
     if member.project_id != project.id:
-        flash('Member does not belong to this project.')
+        flash(get_message('member_not_belong'))
         return redirect(url_for('project_members', project_id=project.id))
     db.session.delete(member)
     db.session.commit()
-    flash('Member removed.')
+    flash(get_message('member_removed'))
     return redirect(url_for('project_members', project_id=project.id))
 
 @app.route('/my_requests')
@@ -331,14 +320,14 @@ def my_requests():
 def cancel_request(request_id):
     req = ProjectJoinRequest.query.get_or_404(request_id)
     if req.user_id != current_user.id:
-        flash('You cannot cancel this request.')
+        flash(get_message('cannot_cancel'))
         return redirect(url_for('my_requests'))
     if req.status != 'pending':
-        flash('Only pending requests can be cancelled.')
+        flash(get_message('only_pending'))
         return redirect(url_for('my_requests'))
     db.session.delete(req)
     db.session.commit()
-    flash('Request cancelled.')
+    flash(get_message('request_cancelled'))
     return redirect(url_for('my_requests'))
 
 @app.route('/profile/<int:user_id>')
@@ -355,28 +344,26 @@ def edit_profile():
         if new_username and new_username != current_user.username:
             existing = User.query.filter_by(username=new_username).first()
             if existing:
-                flash('Username already taken.')
+                flash(get_message('username_taken'))
                 return redirect(url_for('edit_profile'))
             current_user.username = new_username
-        
         old_password = request.form.get('old_password')
         new_password = request.form.get('new_password')
         confirm_password = request.form.get('confirm_password')
         if old_password and new_password:
             if not check_password_hash(current_user.password, old_password):
-                flash('Old password is incorrect.')
+                flash(get_message('old_pass_incorrect'))
                 return redirect(url_for('edit_profile'))
                 if new_password != confirm_password:
-                    flash('New passwords do not match.')
+                    flash(get_message('passwords_no_match'))
                     return redirect(url_for('edit_profile'))
                 strong, msg = is_password_strong(new_password)
                 if not strong:
-                    flash(msg)
+                    flash(get_message(msg))
                     return redirect(url_for('edit_profile'))
                 current_user.password = generate_password_hash(new_password)
         bio = request.form.get('bio')
         current_user.bio = bio
-        
         if 'avatar' in request.files:
             file = request.files['avatar']
             if file and file.filename != '':
@@ -389,10 +376,10 @@ def edit_profile():
                     file.save(os.path.join(upload_path, filename))
                     current_user.avatar = filename
                 else:
-                    flash('Invalid file type for avatar. Allowed: png, jpg, jpeg, gif')
+                    flash(get_message('invalid_avatar'))
                     return redirect(url_for('edit_profile'))
         db.session.commit()
-        flash('Profile updated successfully.')
+        flash(get_message('profile_updated'))
         return redirect(url_for('profile', user_id=current_user.id))
     return render_template('edit_profile.html', user=current_user)
 
@@ -402,13 +389,12 @@ def get_avatar(name):
     return send_from_directory(os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], 'avatars'), name)
 
 def is_password_strong(password):
-    """Возвращает (bool, сообщение_об_ошибке)"""
     if len(password) < 6:
-        return False, "Password must be at least 6 characters long."
+        return False, "pass_short"
     if not any(c.isalpha() for c in password):
-        return False, "Password must contain at least one letter."
+        return False, "pass_no_letter"
     if not any(c.isdigit() for c in password):
-        return False, "Password must contain at least one digit."
+        return False, "pass_no_digit"
     return True, ""
 
 @app.route('/settings', methods=['GET', 'POST'])
@@ -416,40 +402,24 @@ def is_password_strong(password):
 def settings():
     if request.method == 'POST':
         theme = request.form.get('theme')
+        language = request.form.get('language')
+        
+        updated = False
         if theme in ['light', 'dark', 'glamour', 'neon', 'matrix', 'ocean']:
             current_user.theme = theme
+            updated = True
+            
+        if language in ['en', 'ru', 'es', 'fr', 'de']:
+            current_user.language = language
+            updated = True
+            
+        if updated:
             db.session.commit()
-            flash('Theme updated successfully.')
+            flash(get_message('settings_updated'))
         else:
-            flash('Invalid theme selection.')
+            flash(get_message('no_settings'))
         return redirect(url_for('settings'))
     return render_template('settings.html')
-
-@app.route('/api/weather')
-def get_weather():
-    lat = request.args.get('lat')
-    lon = request.args.get('lon')
-    if not lat or not lon:
-        return jsonify({'error': 'No coordinates'}), 400
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true&timezone=auto"
-    try:
-        response = requests.get(url, timeout=5)
-        data = response.json()
-        current = data.get('current_weather', {})
-        temp = current.get('temperature')
-        weathercode = current.get('weathercode')
-        #https://open-meteo.com/en/docs
-        #0=ясно, 1-3=облачно, 45-48=туман, 51-67=дождь, 71-77=снег, 80-99=гроза/ливень
-        if temp is not None:
-            return jsonify({
-                'temp': temp,
-                'weathercode': weathercode,
-                'units': '°C'
-            })
-        else:
-            return jsonify({'error': 'No weather data'}), 500
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

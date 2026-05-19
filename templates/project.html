@@ -6,7 +6,7 @@
     <p class="text-muted">{{ project.description }}</p>
 </div>
 
-<!-- Блок для не-участников -->
+
 {% if not is_owner and not is_member %}
 <div class="alert alert-info">
     You are not a member of this project.
@@ -16,7 +16,7 @@
 </div>
 {% endif %}
 
-<!-- Кнопки для владельца/участников -->
+
 {% if is_owner %}
 <div class="mb-3">
     <a href="/project/{{ project.id }}/requests" class="btn btn-warning">Manage Join Requests</a>
@@ -55,7 +55,6 @@
         <div class="alert alert-light border">No logs or files yet. Start by adding one below!</div>
         {% endfor %}
     </div>
-    
     <div class="col-md-4">
         <div class="card bg-light">
             <div class="card-header">Add Log / Upload File</div>
@@ -83,7 +82,6 @@
 {% block scripts %}
 {{ super() }}
 <script>
-    // Проверка типа файла перед отправкой (как было ранее)
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.querySelector('form[action*="/add_log"]');
         if (!form) return;
@@ -109,7 +107,6 @@
             }
         });
     });
-    // Google Translate
     function googleTranslateElementInit() {
         new google.translate.TranslateElement({pageLanguage: 'en'}, 'google_translate_element');
     }
