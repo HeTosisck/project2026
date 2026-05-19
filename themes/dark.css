@@ -100,3 +100,26 @@ button, a {
 .btn-close {
     filter: invert(1);
 }
+.weather-widget {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(30, 35, 48, 0.85);
+    backdrop-filter: blur(8px);
+    padding: 6px 14px;
+    border-radius: 40px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #eef2ff;
+    border: 1px solid #2a2f3c;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transition: all 0.2s ease;
+}
+.weather-widget:hover {
+    background: rgba(30, 35, 48, 1);
+    border-color: #3b4b6e;
+    transform: translateY(-1px);
+}
+.weather-icon {
+    font-size: 1.2rem;
+}

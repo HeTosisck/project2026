@@ -70,3 +70,28 @@ h1, h2, h3, h4 {
     border-radius: 16px;
     backdrop-filter: blur(4px);
 }
+.weather-widget {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(0,67,84,0.7);
+    backdrop-filter: blur(12px);
+    padding: 6px 18px;
+    border-radius: 60px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #e0f7ff;
+    border: 1px solid #20b2aa;
+    box-shadow: 0 4px 15px rgba(0,180,216,0.2);
+    transition: all 0.3s ease;
+}
+.weather-widget:hover {
+    background: rgba(0,107,127,0.8);
+    border-color: #7fffd4;
+    box-shadow: 0 6px 20px rgba(0,180,216,0.5);
+    transform: translateY(-2px);
+}
+.weather-icon {
+    font-size: 1.2rem;
+    filter: drop-shadow(0 0 2px aqua);
+}

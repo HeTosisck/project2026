@@ -42,3 +42,26 @@ body {
 button, a {
     transition: all 0.2s ease;
 }
+.weather-widget {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(8px);
+    padding: 6px 14px;
+    border-radius: 40px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1e2a3a;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+}
+.weather-widget:hover {
+    background: rgba(255,255,255,0.95);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.weather-icon {
+    font-size: 1.2rem;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
+}

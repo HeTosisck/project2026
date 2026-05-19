@@ -15,6 +15,7 @@ class User(db.Model, UserMixin):
     projects = db.relationship('Project', backref='owner', lazy=True)
     theme = db.Column(db.String(20), default='light')
     language = db.Column(db.String(10), default='en')
+    city = db.Column(db.String(100), default='Penza')
 
 
 class Project(db.Model):
@@ -25,7 +26,6 @@ class Project(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     logs = db.relationship('ProjectLog', backref='project', lazy=True)
 
-    @property
     def is_member(self, user):
         return ProjectMember.query.filter_by(
             project_id=self.id, user_id=user.id).first() is not None

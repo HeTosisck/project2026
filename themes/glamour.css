@@ -42,3 +42,10 @@ h1, h2, h3, h4 {
     color: #fff2c9;
     border-radius: 12px;
 }
+#weather-widget {
+    font-size: 0.9rem;
+    background: rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 5px 12px;
+    margin-left: 10px;
+}

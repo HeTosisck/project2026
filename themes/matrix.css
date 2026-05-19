@@ -57,3 +57,26 @@ h1, h2, h3, h4 {
     border-left: 3px solid #0f0;
     padding-left: 10px;
 }
+.weather-widget {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #000;
+    border: 1px solid #0f0;
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #0f0;
+    box-shadow: 0 0 6px #0f0;
+    text-transform: uppercase;
+}
+.weather-widget:hover {
+    background: #0f0;
+    color: #000;
+    box-shadow: 0 0 15px #0f0;
+}
+.weather-icon {
+    font-size: 1rem;
+}

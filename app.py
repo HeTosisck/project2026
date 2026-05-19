@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 import requests
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_from_directory
+from flask import Flask, render_template, abort, request, jsonify, redirect, url_for, flash, send_from_directory
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -96,6 +96,10 @@ def login():
 
 @app.route('/theme/<path:filename>')
 def serve_theme(filename):
+    safe_path = os.path.join('themes', filename)
+    safe_path = os.path.normpath(safe_path)
+    if not safe_path.startswith('themes'):
+        abort(403)
     return send_from_directory('themes', filename)
 
 
@@ -174,26 +178,21 @@ def view_project(project_id):
 def add_log(project_id):
     project = Project.query.get_or_404(project_id)
     is_owner = (project.user_id == current_user.id)
-    is_member = ProjectMember.query.filter_by(
-        project_id=project.id,
-        user_id=current_user.id).first() is not None
+    is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=current_user.id).first() is not None
     if not (is_owner or is_member):
         flash(get_message('access_denied'))
         return redirect(url_for('index'))
     content = request.form.get('content', '')
     file_path = None
+    confirm_unsafe = request.form.get('confirm_unsafe') == '1'
     if 'file' in request.files:
         file = request.files['file']
         if file.filename != '':
-            if not allowed_file(file.filename):
-                flash(
-                    get_message(
-                        'invalid_file_type',
-                        extensions=', '.join(ALLOWED_EXTENSIONS)))
+            if not allowed_file(file.filename) and not confirm_unsafe:
+                flash(get_message('invalid_file_type', extensions=', '.join(ALLOWED_EXTENSIONS)))
                 return redirect(url_for('view_project', project_id=project.id))
             filename = secure_filename(file.filename)
-            upload_path = os.path.join(
-                app.root_path, app.config['UPLOAD_FOLDER'])
+            upload_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'])
             os.makedirs(upload_path, exist_ok=True)
             file.save(os.path.join(upload_path, filename))
             file_path = filename
@@ -202,10 +201,7 @@ def add_log(project_id):
         return redirect(url_for('view_project', project_id=project.id))
     if not content.strip():
         content = "Uploaded a file"
-    new_log = ProjectLog(
-        content=content,
-        image_path=file_path,
-        project_id=project.id)
+    new_log = ProjectLog(content=content, image_path=file_path, project_id=project.id)
     db.session.add(new_log)
     db.session.commit()
     flash(get_message('log_added'))
@@ -460,10 +456,7 @@ def edit_profile():
                 if allowed_file(file.filename):
                     filename = secure_filename(file.filename)
                     name, ext = os.path.splitext(filename)
-                    filename = f"avatar_{
-                        current_user.id}_{
-                        int(
-                            datetime.now().timestamp())}{ext}"
+                    filename = f"avatar_{current_user.id}_{int(dat.now().timestamp())}{ext}"
                     upload_path = os.path.join(
                         app.root_path, app.config['UPLOAD_FOLDER'], 'avatars')
                     os.makedirs(upload_path, exist_ok=True)
