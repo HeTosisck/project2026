@@ -60,13 +60,6 @@ def allowed_file(filename):
         '.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def has_project_access(project, user):
-    if project.user_id == user.id:
-        return True
-    return ProjectMember.query.filter_by(
-        project_id=project.id, user_id=user.id).first() is not None
-
-
 db.init_app(app)
 with app.app_context():
     db.create_all()
@@ -441,17 +434,14 @@ def edit_profile():
             if not check_password_hash(current_user.password, old_password):
                 flash(get_message('old_pass_incorrect'))
                 return redirect(url_for('edit_profile'))
-
-            if new_password != confirm_password:
-                flash(get_message('passwords_no_match'))
-                return redirect(url_for('edit_profile'))
-
-            is_strong, err_msg = is_password_strong(new_password)
-            if not is_strong:
-                flash(get_message(err_msg))
-                return redirect(url_for('edit_profile'))
-
-            current_user.password = generate_password_hash(new_password)
+                if new_password != confirm_password:
+                    flash(get_message('passwords_no_match'))
+                    return redirect(url_for('edit_profile'))
+                strong, msg = is_password_strong(new_password)
+                if not strong:
+                    flash(get_message(msg))
+                    return redirect(url_for('edit_profile'))
+                current_user.password = generate_password_hash(new_password)
         bio = request.form.get('bio')
         current_user.bio = bio
         if 'avatar' in request.files:
